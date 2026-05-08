@@ -304,12 +304,14 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         if (stream is null || stream.Length == 0)
         {
-            return default;
+            return EmptyJsonObject;
         }
 
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         return doc.RootElement.Clone();
     }
+
+    private static readonly JsonElement EmptyJsonObject = JsonDocument.Parse("{}").RootElement.Clone();
 
     private async Task SendNoContentAsync(
         HttpMethod method,
