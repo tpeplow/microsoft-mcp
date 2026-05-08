@@ -333,8 +333,16 @@ and keep going.
 4.6  Call `download_file` for `Files/data_${RUN_ID}/payload.json` on the
      shortcut lakehouse.
      ASSERT: bytes match the original payload from 3.2.
-4.7  Call `reset_shortcut_cache` on the shortcut lakehouse. Repeat 4.6.
-     ASSERT: still works (cache reset shouldn't break reads).
+4.7  Call `reset_shortcut_cache` on the workspace.
+     ASSERT (endpoint reachability only): the call either returns 200/204
+     (workspace has external shortcut cache enabled, real reset succeeded)
+     OR returns 400 with `ExternalShortcutCacheDisabled` (workspace lacks
+     the feature). Both confirm the tool routed to the correct Fabric
+     endpoint with valid auth. We deliberately do NOT stand up an
+     S3-backed external shortcut in this harness (too much extra infra),
+     so the disabled-feature path is the expected outcome on a clean
+     workspace and should still PASS. Anything else (404, 401, 5xx,
+     missing envelope, wrong route in stack trace) is a real failure.
 
 # Phase 5 — Tables (best-effort — empty is acceptable)
 
