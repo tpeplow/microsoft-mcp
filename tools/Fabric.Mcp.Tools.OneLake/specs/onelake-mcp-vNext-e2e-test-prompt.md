@@ -189,6 +189,50 @@ and keep going.
     not `name`. `core create-item` returns `results.item.id`. If a result
     field is unexpectedly null, dump the full envelope into the report
     rather than asserting against a guessed path.
+11. **Maintain a per-run request/response log.** In addition to the
+    structured JSON report at the end, write a human-readable markdown
+    transcript at
+    `tools/Fabric.Mcp.Tools.OneLake/specs/runs/onelake-e2e-${RUN_ID}.md`
+    (create the `runs/` directory if it doesn't exist). The transcript is
+    the primary artifact a human will read when triaging a failed step —
+    treat it as first-class, not optional. Append one section per phase,
+    one subsection per numbered step, and inside each step record:
+
+    - the exact tool name invoked (e.g. `onelake list_files`),
+    - the **full inputs** you sent (option flags + any JSON body), in a
+      fenced code block,
+    - the **full response envelope** (`status`, `message`, `results`,
+      `duration`), in a fenced code block — do not truncate, do not
+      pretty-print away keys, do not redact error messages,
+    - a one-line outcome (`pass` / `fail` / `skip`) plus the assertion
+      result if applicable,
+    - any retries you did and why (one fenced block per retry attempt).
+
+    Use this template for every step:
+
+    ````markdown
+    ### <phase>.<step> — <tool name>
+
+    **Outcome:** pass | fail | skip
+    **Assertion:** <copy from prompt> → pass | fail | n/a
+    **Notes:** <one line, optional>
+
+    **Request**
+
+    ```
+    <full CLI invocation or full MCP arguments JSON>
+    ```
+
+    **Response**
+
+    ```json
+    { "status": ..., "message": "...", "results": { ... }, "duration": ... }
+    ```
+    ````
+
+    Skipped steps still get a section with `Outcome: skip` and a one-line
+    reason. The transcript file is what makes the next session able to
+    re-attempt only the failing steps without re-running the whole suite.
 
 # Phase 0 — Setup
 
