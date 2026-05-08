@@ -18,7 +18,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.File;
     Id = "f6b3249d-6481-4e80-9d34-0d6867718dd7",
     Name = "upload_file",
     Title = "Upload OneLake File",
-    Description = "Uploads a file to OneLake storage from inline content or local file path. Use this when the user needs to store data in OneLake. Supports overwrite control and content type specification.",
+    Description = "Upload a file to OneLake from inline content or a local path. Overwrites by default — pass `overwrite=false` to fail-on-conflict instead. Requires `OneLake.ReadWrite.All`.",
     Destructive = true,
     Idempotent = false,
     LocalRequired = false,

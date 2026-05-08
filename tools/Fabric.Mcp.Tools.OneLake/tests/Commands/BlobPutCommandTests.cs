@@ -17,7 +17,7 @@ public class BlobPutCommandTests : CommandUnitTestsBase<BlobPutCommand, IOneLake
     public void Constructor_InitializesCommandCorrectly()
     {
         Assert.Equal("upload_file", Command.Name);
-        Assert.Contains("Uploads a file to OneLake storage", Command.Description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Upload a file to OneLake", Command.Description, StringComparison.OrdinalIgnoreCase);
         Assert.False(Command.Metadata.ReadOnly);
         Assert.True(Command.Metadata.Destructive);
     }

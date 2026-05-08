@@ -12,12 +12,16 @@ OneLake is Microsoft Fabric's built-in data lake that provides unified storage f
 - Integrate with other Fabric workloads through OneLake
 
 **Features:**
-- 19 comprehensive OneLake commands with full MCP integration
+- 31 OneLake commands with full MCP integration covering files, tables, shortcuts, security (data access roles), and OneLake workspace settings
 - Complete coverage for OneLake table APIs: configuration, namespace discovery, and table metadata
-- Friendly-name support for workspaces and items across data-plane commands ( `item-create` currently requires GUID IDs )
+- Friendly-name support for workspaces and items across data-plane commands
 - Robust error handling and authentication
-- Production-ready with 100% test coverage (132 tests)
+- Production-ready with high unit-test coverage
 - Clean, focused API design optimized for AI agent interactions
+
+> **Discovery note:** For finding workspaces or items by name/keyword/type, prefer `core_search_catalog` from the hosted Fabric Core MCP server — it is tenant-wide and server-side. The `onelake_list_*` tools are for inventory inside a workspace/item you already know.
+
+> **Removed in vNext:** the legacy `onelake blob list` and `onelake blob delete` tools have been removed; use `onelake_list_files` (DFS) and `onelake_delete_file` instead. Item creation is now handled by `core_create_item` in the Fabric Core MCP server.
 
 ## Prerequisites
 
@@ -90,7 +94,7 @@ You can verify which environment you're targeting by checking the endpoints in t
 
 ### Workspace and Item Identifiers
 
-All commands except `item create` accept either GUID identifiers or friendly names via the `--workspace` and `--item` options. The existing `--workspace-id` and `--item-id` switches remain available for scripts that already depend on them. Friendly-name inputs are sent directly to the OneLake APIs without local GUID resolution; when using names, specify the item as `<itemName>.<itemType>` (for example, `SalesLakehouse.lakehouse`). `item create` currently requires the GUID-based `--workspace-id` option. Table-based commands additionally accept schema identifiers through `--namespace` or its alias `--schema`.
+All commands accept either GUID identifiers or friendly names via the `--workspace` and `--item` options. The existing `--workspace-id` and `--item-id` switches remain available for scripts that already depend on them. Friendly-name inputs are sent directly to the OneLake APIs without local GUID resolution; when using names, specify the item as `<itemName>.<itemType>` (for example, `SalesLakehouse.lakehouse`). Table-based commands additionally accept schema identifiers through `--namespace` or its alias `--schema`.
 
 ```bash
 dotnet run -- onelake file list --workspace "Analytics Workspace" --item "SalesLakehouse.lakehouse" --path "Files"
@@ -170,20 +174,9 @@ dotnet run -- onelake item list-data --workspace-id "47242da5-ff3b-46fb-a94f-977
 - `--workspace-id`: The ID of the Microsoft Fabric workspace
 - `--recursive`: (Optional) Whether to perform the operation recursively
 
-#### Create Item
+#### Create Item (moved)
 
-Creates a new item (Lakehouse, Notebook, etc.) in a Microsoft Fabric workspace using the Fabric API.
-
-```bash
-dotnet run -- onelake item create --workspace-id "47242da5-ff3b-46fb-a94f-977909b773d5" --display-name "NewLakehouse" --type "Lakehouse"
-```
-
-> **Note:** `item create` currently requires the GUID-based `--workspace-id` switch; friendly workspace names are not supported for this command yet.
-
-**Parameters:**
-- `--workspace-id`: The ID of the Microsoft Fabric workspace
-- `--display-name`: Display name for the new item
-- `--type`: Type of item to create (e.g., Lakehouse, Notebook)
+> Item creation is no longer part of the OneLake MCP. Use **`core_create_item`** in the hosted Fabric Core MCP server, which supports the full Fabric items catalog and accepts workspace IDs or friendly names.
 
 ### File Operations
 
@@ -353,91 +346,6 @@ dotnet run -- onelake download file --workspace "Analytics Workspace" --item "Sa
 }
 ```
 
-#### Delete Blob (Blob Endpoint)
-
-Removes a blob using the OneLake blob endpoint and returns the request identifiers emitted by the platform.
-
-```bash
-dotnet run -- onelake blob delete --workspace-id "47242da5-ff3b-46fb-a94f-977909b773d5" --item-id "0e67ed13-2bb6-49be-9c87-a1105a4ea342" --file-path "Files/data/archive.bin"
-```
-
-**Parameters:**
-- `--workspace-id` / `--workspace`: Workspace identifier or friendly name
-- `--item-id` / `--item`: Item identifier or friendly name
-- `--file-path`: Path to the blob to remove
-
-**Example Output:**
-```json
-{
-  "status": 200,
-  "message": "Success",
-  "results": {
-    "result": {
-      "workspaceId": "47242da5-ff3b-46fb-a94f-977909b773d5",
-      "itemId": "0e67ed13-2bb6-49be-9c87-a1105a4ea342",
-      "path": "Files/data/archive.bin",
-      "version": "2023-11-03",
-      "requestId": "b2aa28ff-96ff-4afc-8d0f-6a2151ad5e3e",
-      "clientRequestId": "8a347b58-d80a-46f3-b4f2-0efd8e6a60a1",
-      "rootActivityId": "0c828f9e-348c-4d7a-9c61-34dfe0f4e279"
-    },
-    "message": "Blob deleted successfully."
-  }
-}
-```
-
-#### List Files as Blobs
-
-Lists files and directories in OneLake storage as blobs. Browse the contents of a lakehouse or specific directory path with optional recursive listing in blob format.
-
-```bash
-dotnet run -- onelake blob list --workspace-id "47242da5-ff3b-46fb-a94f-977909b773d5" --item-id "0e67ed13-2bb6-49be-9c87-a1105a4ea342"
-```
-
-**With path and recursive options:**
-```bash
-dotnet run -- onelake blob list --workspace-id "47242da5-ff3b-46fb-a94f-977909b773d5" --item-id "0e67ed13-2bb6-49be-9c87-a1105a4ea342" --path "raw_data" --recursive
-```
-
-**Parameters:**
-- `--workspace-id`: The ID of the Microsoft Fabric workspace (GUID)
-- `--item-id`: The ID of the Fabric item (GUID)
-- `--path`: (Optional) The path to list in OneLake storage (defaults to root)
-- `--recursive`: (Optional) Whether to perform the operation recursively
-
-**Example Output:**
-```json
-{
-  "status": 200,
-  "message": "Success",
-  "results": {
-    "files": [
-      {
-        "name": "data.json",
-        "path": "0e67ed13-2bb6-49be-9c87-a1105a4ea342/Files/raw_data/data.json",
-        "isDirectory": false,
-        "size": 76443,
-        "lastModified": "2025-10-28T19:23:21+00:00",
-        "contentType": "application/octet-stream",
-        "etag": null
-      },
-      {
-        "name": "reports",
-        "path": "0e67ed13-2bb6-49be-9c87-a1105a4ea342/Files/raw_data/reports",
-        "isDirectory": true,
-        "size": 0,
-        "lastModified": "2025-10-28T18:10:09+00:00",
-        "contentType": "application/x-directory",
-        "etag": null
-      }
-    ],
-    "basePath": ""
-  }
-}
-```
-
-**Use Case:** Best for discovering all files in a flat structure, similar to Azure Blob Storage. Provides a comprehensive list of all files and directories with basic metadata.
-
 #### List File Structure (DFS API)
 
 Lists files and directories in OneLake storage using a filesystem-style hierarchical view, similar to Azure Data Lake Storage Gen2. Shows directory structure with paths, sizes, timestamps, and metadata.
@@ -504,16 +412,9 @@ dotnet run -- onelake file list --workspace-id "47242da5-ff3b-46fb-a94f-977909b7
 
 **Use Case:** Best for exploring OneLake content in a filesystem format with rich metadata including POSIX-style permissions, ownership, and ETags. Ideal for traditional file system navigation patterns.
 
-#### API Comparison: Blob vs Path Listing
+#### File Listing API
 
-| Feature | `blob list` | `file list` |
-|---------|-------------|-------------|
-| **API Endpoint** | OneLake Blob Storage | OneLake DFS (Data Lake File System) |
-| **Output Style** | Flat blob listing | Hierarchical filesystem view |
-| **Metadata Depth** | Basic (size, modified, contentType) | Rich (permissions, owner, group, etag) |
-| **Best For** | File discovery, bulk operations | Navigation, permissions management |
-| **Recursive Default** | Shows all files when recursive | Shows directory structure when recursive |
-| **Path Format** | Full blob paths | Filesystem-style paths |
+Files and directories are listed via the OneLake DFS (filesystem) API through `onelake_list_files`. The previous flat-blob listing tool has been removed in favor of the hierarchical view.
 
 ### Directory Operations
 
@@ -629,6 +530,120 @@ dotnet run -- onelake table get --workspace-id "47242da5-ff3b-46fb-a94f-977909b7
 - `--namespace`/`--schema`: Namespace (schema) name
 - `--table`: Table name to retrieve
 
+### Shortcut Operations
+
+OneLake shortcuts let you reference data in another OneLake item or external source without copying it. All shortcut tools require `OneLake.Read.All` (read) or `OneLake.ReadWrite.All` (write).
+
+#### List Shortcuts
+
+```bash
+dotnet run -- onelake list_shortcuts --workspace "Analytics Workspace" --item "Sales.Lakehouse"
+```
+
+Recursively lists all shortcuts in the item; optionally narrow with `--shortcut-path`.
+
+#### Get Shortcut
+
+```bash
+dotnet run -- onelake get_shortcut --workspace "Analytics Workspace" --item "Sales.Lakehouse" --shortcut-path "Files" --shortcut-name "external"
+```
+
+#### Create Or Update Shortcuts (bulk)
+
+The Fabric API only exposes a bulk shortcut create endpoint, so this single tool handles both initial creation and updates. By default it fails on conflict; pass `--create-or-overwrite true` to upsert.
+
+```bash
+dotnet run -- onelake create_or_update_shortcuts \
+  --workspace "Analytics Workspace" --item "Sales.Lakehouse" \
+  --create-or-overwrite true \
+  --definition '{"shortcuts":[{"path":"Files","name":"external","target":{"oneLake":{"workspaceId":"...","itemId":"...","path":"Tables"}}}]}'
+```
+
+#### Delete Shortcut
+
+```bash
+dotnet run -- onelake delete_shortcut --workspace "Analytics Workspace" --item "Sales.Lakehouse" --shortcut-path "Files" --shortcut-name "external"
+```
+
+The destination data is preserved — only the shortcut reference is removed.
+
+#### Reset Shortcut Cache
+
+```bash
+dotnet run -- onelake reset_shortcut_cache --workspace "Analytics Workspace"
+```
+
+Drops cached shortcut reads, forcing the next read to re-resolve. Use sparingly — primarily for debugging stale-cache issues.
+
+### Security (Data Access Roles)
+
+Data access roles control fine-grained access to OneLake content within an item. They combine *member principals* (Entra users, groups, service principals) with *decision rules* (effects on `Tables` / `Files` paths).
+
+#### List / Get Roles
+
+```bash
+dotnet run -- onelake list_data_access_roles --workspace "Analytics Workspace" --item "Sales.Lakehouse"
+dotnet run -- onelake get_data_access_role --workspace "Analytics Workspace" --item "Sales.Lakehouse" --role-name "ReadOnlySales"
+```
+
+#### Create Or Update Role
+
+```bash
+dotnet run -- onelake create_or_update_data_access_role \
+  --workspace "Analytics Workspace" --item "Sales.Lakehouse" \
+  --role-name "ReadOnlySales" \
+  --definition '{"members":[{"objectId":"...","tenantId":"...","type":"User"}],"decisionRules":[{"effect":"Permit","permission":["Read"],"attributeMatchers":[{"attributeName":"Path","attributeValueIncludedIn":["/Tables/Sales"]}]}]}' \
+  --etag "W/\"datetime'2024-01-01T00%3A00%3A00Z'\""   # optional, for optimistic concurrency
+```
+
+#### Delete Role
+
+```bash
+dotnet run -- onelake delete_data_access_role --workspace "Analytics Workspace" --item "Sales.Lakehouse" --role-name "ReadOnlySales"
+```
+
+#### Get Principal Access (Preview)
+
+Audit what a given principal can actually do on an item:
+
+```bash
+dotnet run -- onelake get_principal_access \
+  --workspace "Analytics Workspace" --item "Sales.Lakehouse" \
+  --principal-id "00000000-0000-0000-0000-000000000000" \
+  --principal-type "User" \
+  --input-path "Tables"   # optional: 'Tables' or 'Files'
+```
+
+> The Microsoft `Get Principal Access` API is in **Preview**.
+
+### OneLake Workspace Settings
+
+#### Get Settings
+
+```bash
+dotnet run -- onelake get_settings --workspace "Analytics Workspace"
+```
+
+Returns the OneLake-level settings (diagnostics, immutability policy, etc.) for the workspace.
+
+#### Modify Diagnostics
+
+```bash
+dotnet run -- onelake modify_diagnostics \
+  --workspace "Analytics Workspace" \
+  --diagnostics '{"enabled":true,"workspaceId":"..."}'
+```
+
+#### Modify Immutability Policy
+
+```bash
+dotnet run -- onelake modify_immutability_policy \
+  --workspace "Analytics Workspace" \
+  --immutability-policy '{"enabled":true,"retentionDays":30}'
+```
+
+> ⚠️ **Warning:** enabling immutability is **irreversible** — once enabled it cannot be disabled. Confirm intent before running.
+
 ## Quick Reference - fabmcp.exe Commands
 
 For users with the compiled `fabmcp.exe` executable, here are ready-to-use commands:
@@ -676,9 +691,6 @@ fabmcp.exe onelake upload file --workspace "47242da5-ff3b-46fb-a94f-977909b773d5
 
 # Download a file with metadata (Blob endpoint)
 fabmcp.exe onelake download file --workspace "47242da5-ff3b-46fb-a94f-977909b773d5" --item "0e67ed13-2bb6-49be-9c87-a1105a4ea342" --file-path "Files/data/archive.bin"
-
-# Delete a blob (Blob endpoint)
-fabmcp.exe onelake blob delete --workspace "47242da5-ff3b-46fb-a94f-977909b773d5" --item "0e67ed13-2bb6-49be-9c87-a1105a4ea342" --file-path "Files/data/archive.bin"
 ```
 
 ### Table Operations
@@ -746,8 +758,8 @@ dotnet run -- onelake item list --workspace-id "WORKSPACE_ID"
 # 3. Explore data structure using hierarchical view
 dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "data/reports"
 
-# 4. Get comprehensive file inventory with blob listing
-dotnet run -- onelake blob list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "data" --recursive
+# 4. Get a comprehensive recursive file inventory
+dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "data" --recursive
 
 # 5. Read analysis results
 dotnet run -- onelake file read --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --file-path "reports/monthly_summary.json"
@@ -764,16 +776,15 @@ dotnet run -- onelake directory delete --workspace-id "WORKSPACE_ID" --item-id "
 # 1. Quick overview of lakehouse structure using DFS API (shows directories and permissions)
 dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "Tables"
 
-# 2. Comprehensive file search using Blob API (finds all files including nested)
-dotnet run -- onelake blob list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "Files" --recursive
+# 2. Comprehensive recursive file search
+dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "Files" --recursive
 
-# 3. Compare structure views - hierarchical vs flat
+# 3. Inspect a specific subtree
 dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "data/processed"
-dotnet run -- onelake blob list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --path "data/processed"
 
 # 4. Find specific file types across the entire lakehouse
-dotnet run -- onelake blob list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --recursive | grep "\.parquet"
-dotnet run -- onelake blob list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --recursive | grep "\.delta"
+dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --recursive | grep "\.parquet"
+dotnet run -- onelake file list --workspace-id "WORKSPACE_ID" --item-id "ITEM_ID" --recursive | grep "\.delta"
 ```
 
 ## Error Handling

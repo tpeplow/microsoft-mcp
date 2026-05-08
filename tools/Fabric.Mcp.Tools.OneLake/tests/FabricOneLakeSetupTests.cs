@@ -63,5 +63,28 @@ public class FabricOneLakeSetupTests
         Assert.True(rootGroup.Commands.ContainsKey("get_table"), "Should have get_table command");
         Assert.True(rootGroup.Commands.ContainsKey("list_table_namespaces"), "Should have list_table_namespaces command");
         Assert.True(rootGroup.Commands.ContainsKey("get_table_namespace"), "Should have get_table_namespace command");
+
+        // Shortcuts
+        Assert.True(rootGroup.Commands.ContainsKey("list_shortcuts"), "Should have list_shortcuts command");
+        Assert.True(rootGroup.Commands.ContainsKey("get_shortcut"), "Should have get_shortcut command");
+        Assert.True(rootGroup.Commands.ContainsKey("create_or_update_shortcuts"), "Should have create_or_update_shortcuts command");
+        Assert.True(rootGroup.Commands.ContainsKey("delete_shortcut"), "Should have delete_shortcut command");
+        Assert.True(rootGroup.Commands.ContainsKey("reset_shortcut_cache"), "Should have reset_shortcut_cache command");
+
+        // Security
+        Assert.True(rootGroup.Commands.ContainsKey("list_data_access_roles"), "Should have list_data_access_roles command");
+        Assert.True(rootGroup.Commands.ContainsKey("get_data_access_role"), "Should have get_data_access_role command");
+        Assert.True(rootGroup.Commands.ContainsKey("create_or_update_data_access_role"), "Should have create_or_update_data_access_role command");
+        Assert.True(rootGroup.Commands.ContainsKey("delete_data_access_role"), "Should have delete_data_access_role command");
+        Assert.True(rootGroup.Commands.ContainsKey("get_principal_access"), "Should have get_principal_access command");
+
+        // Settings
+        Assert.True(rootGroup.Commands.ContainsKey("get_settings"), "Should have get_settings command");
+        Assert.True(rootGroup.Commands.ContainsKey("modify_diagnostics"), "Should have modify_diagnostics command");
+        Assert.True(rootGroup.Commands.ContainsKey("modify_immutability_policy"), "Should have modify_immutability_policy command");
+
+        // Removed legacy commands
+        Assert.False(rootGroup.Commands.ContainsKey("blob_list"), "blob_list should be removed");
+        Assert.False(rootGroup.Commands.ContainsKey("blob_delete"), "blob_delete should be removed");
     }
 }

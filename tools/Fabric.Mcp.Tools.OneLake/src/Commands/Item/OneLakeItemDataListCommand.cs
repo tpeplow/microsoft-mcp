@@ -20,7 +20,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Item;
     Id = "8925d0c4-becf-4b5a-8af1-3e998c1058ec",
     Name = "list_items_dfs",
     Title = "List OneLake Items (Data API)",
-    Description = "List OneLake items in a workspace using the OneLake DFS (Data Lake File System) data API.",
+    Description = "DFS-style enumeration of OneLake items in a single workspace, returning DFS paths suitable for downstream file IO. Use only when you need DFS paths and you already know the workspace. For finding items by name/description/type, use `core_search_catalog` from the hosted Fabric Core MCP server instead. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

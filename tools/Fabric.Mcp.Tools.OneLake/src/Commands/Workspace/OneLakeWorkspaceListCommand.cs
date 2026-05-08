@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Workspace;
     Id = "5f005a27-9838-4c09-9785-55ce49963c97",
     Name = "list_workspaces",
     Title = "List OneLake Workspaces",
-    Description = "Lists all Fabric workspaces accessible via OneLake data plane API. Use this when the user needs to view available workspaces or select a workspace for data operations. Returns workspace names and IDs.",
+    Description = "Enumerate Fabric workspaces accessible via the OneLake data plane API. Use this when the user wants the full list of workspaces they can reach. For finding a workspace by name or keyword, prefer `core_search_catalog` from the hosted Fabric Core MCP server (filter on `Type eq 'Workspace'`) — it is tenant-wide and server-side. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     OpenWorld = false,

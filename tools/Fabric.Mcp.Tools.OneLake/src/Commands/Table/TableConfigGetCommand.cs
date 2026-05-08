@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Table;
     Id = "bc15c475-0329-4cc3-aaa8-0e9f3fbde6f8",
     Name = "get_table_config",
     Title = "Get OneLake Table Configuration",
-    Description = "Retrieves table API configuration for OneLake. Use this when the user needs to understand table access settings.",
+    Description = "Retrieve the OneLake Table API configuration for a single table (storage format, partitioning, file layout). Read-only; intended for diagnostics, not normal data access. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

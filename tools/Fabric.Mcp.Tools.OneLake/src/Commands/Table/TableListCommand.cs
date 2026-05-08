@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Table;
     Id = "7b1688e5-2a16-475d-8fd1-9bf3b0acf4f7",
     Name = "list_tables",
     Title = "List OneLake Tables",
-    Description = "Lists tables in OneLake. Use this when the user needs to see available tables.",
+    Description = "List the tables exposed by the OneLake Table API for a single namespace within an item (typically a Lakehouse or Warehouse). Requires a `namespace` argument — call `onelake_list_table_namespaces` first if you don't already have one. For schema/columns/row counts on a specific table, follow up with `onelake_get_table`. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

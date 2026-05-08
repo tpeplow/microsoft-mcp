@@ -178,4 +178,92 @@ public static class FabricOptionDefinitions
         Description = "The table name exposed by the OneLake table API.",
         Required = true
     };
+
+    // Shortcuts
+    public const string ShortcutPathName = "shortcut-path";
+    public static readonly Option<string> ShortcutPath = new($"--{ShortcutPathName}")
+    {
+        Description = "The parent path of the shortcut (relative to the item root, e.g. 'Files/folder').",
+        Required = false
+    };
+
+    public const string ShortcutNameName = "shortcut-name";
+    public static readonly Option<string> ShortcutName = new($"--{ShortcutNameName}")
+    {
+        Description = "The shortcut name.",
+        Required = false
+    };
+
+    public const string CreateOrOverwriteName = "create-or-overwrite";
+    public static readonly Option<bool> CreateOrOverwrite = new($"--{CreateOrOverwriteName}")
+    {
+        Description = "When true, existing shortcuts at the same path are replaced. When false (default), the call fails on conflict.",
+        Required = false
+    };
+
+    // Definition payloads (raw JSON for shortcut create/update, role definitions, etc.)
+    public const string DefinitionName = "definition";
+    public static readonly Option<string> Definition = new($"--{DefinitionName}")
+    {
+        Description = "Inline JSON payload describing the resource definition (e.g. shortcut creation body, role members and decision rules).",
+        Required = false
+    };
+
+    // Data access security
+    public const string RoleNameName = "role-name";
+    public static readonly Option<string> RoleName = new($"--{RoleNameName}")
+    {
+        Description = "The data access role name.",
+        Required = false
+    };
+
+    public const string PrincipalIdName = "principal-id";
+    public static readonly Option<string> PrincipalId = new($"--{PrincipalIdName}")
+    {
+        Description = "The Entra principal object ID.",
+        Required = false
+    };
+
+    public const string PrincipalTypeName = "principal-type";
+    public static readonly Option<string> PrincipalType = new($"--{PrincipalTypeName}")
+    {
+        Description = "The Entra principal type (e.g. 'User', 'Group', 'ServicePrincipal').",
+        Required = false
+    };
+
+    public const string InputPathName = "input-path";
+    public static readonly Option<string> InputPath = new($"--{InputPathName}")
+    {
+        Description = "The OneLake input path scope for principal-access lookups: 'Tables' or 'Files'.",
+        Required = false
+    };
+
+    public const string MaxResultsName = "max-results";
+    public static readonly Option<int?> MaxResults = new($"--{MaxResultsName}")
+    {
+        Description = "Maximum number of results to return per page (server may impose its own cap).",
+        Required = false
+    };
+
+    public const string EtagName = "etag";
+    public static readonly Option<string> Etag = new($"--{EtagName}")
+    {
+        Description = "Optional If-Match ETag to enable optimistic concurrency on updates.",
+        Required = false
+    };
+
+    // Settings
+    public const string DiagnosticsName = "diagnostics";
+    public static readonly Option<string> Diagnostics = new($"--{DiagnosticsName}")
+    {
+        Description = "Inline JSON describing the OneLake diagnostics configuration.",
+        Required = false
+    };
+
+    public const string ImmutabilityPolicyName = "immutability-policy";
+    public static readonly Option<string> ImmutabilityPolicy = new($"--{ImmutabilityPolicyName}")
+    {
+        Description = "Inline JSON describing the OneLake immutability policy. Once enabled, immutability cannot be disabled.",
+        Required = false
+    };
 }

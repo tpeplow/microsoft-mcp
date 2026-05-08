@@ -3,6 +3,9 @@
 
 using Fabric.Mcp.Tools.OneLake.Commands.File;
 using Fabric.Mcp.Tools.OneLake.Commands.Item;
+using Fabric.Mcp.Tools.OneLake.Commands.Security;
+using Fabric.Mcp.Tools.OneLake.Commands.Settings;
+using Fabric.Mcp.Tools.OneLake.Commands.Shortcuts;
 using Fabric.Mcp.Tools.OneLake.Commands.Table;
 using Fabric.Mcp.Tools.OneLake.Commands.Workspace;
 using Fabric.Mcp.Tools.OneLake.Services;
@@ -22,6 +25,9 @@ public class FabricOneLakeSetup : IAreaSetup
         services.AddSingleton<IOneLakeService, OneLakeService>();
         services.AddHttpClient<OneLakeService>();
 
+        services.AddSingleton<IFabricApiService, FabricApiService>();
+        services.AddHttpClient<FabricApiService>();
+
         // Register workspace commands
         services.AddSingleton<OneLakeWorkspaceListCommand>();
 
@@ -35,11 +41,9 @@ public class FabricOneLakeSetup : IAreaSetup
         services.AddSingleton<FileDeleteCommand>();
         services.AddSingleton<PathListCommand>();
 
-        // Register blob commands
+        // Register blob commands (download_file / upload_file — class names are historical)
         services.AddSingleton<BlobPutCommand>();
         services.AddSingleton<BlobGetCommand>();
-        services.AddSingleton<BlobDeleteCommand>();
-        services.AddSingleton<BlobListCommand>();
 
         // Register directory commands
         services.AddSingleton<DirectoryCreateCommand>();
@@ -51,6 +55,25 @@ public class FabricOneLakeSetup : IAreaSetup
         services.AddSingleton<TableGetCommand>();
         services.AddSingleton<TableNamespaceListCommand>();
         services.AddSingleton<TableNamespaceGetCommand>();
+
+        // Register security commands (data access roles)
+        services.AddSingleton<DataAccessRoleListCommand>();
+        services.AddSingleton<DataAccessRoleGetCommand>();
+        services.AddSingleton<DataAccessRoleCreateOrUpdateCommand>();
+        services.AddSingleton<DataAccessRoleDeleteCommand>();
+        services.AddSingleton<PrincipalAccessGetCommand>();
+
+        // Register shortcut commands
+        services.AddSingleton<ShortcutListCommand>();
+        services.AddSingleton<ShortcutGetCommand>();
+        services.AddSingleton<ShortcutCreateOrUpdateCommand>();
+        services.AddSingleton<ShortcutDeleteCommand>();
+        services.AddSingleton<ShortcutCacheResetCommand>();
+
+        // Register settings commands
+        services.AddSingleton<OneLakeSettingsGetCommand>();
+        services.AddSingleton<OneLakeDiagnosticsModifyCommand>();
+        services.AddSingleton<OneLakeImmutabilityPolicyModifyCommand>();
     }
 
     public CommandGroup RegisterCommands(IServiceProvider serviceProvider)
@@ -82,6 +105,25 @@ public class FabricOneLakeSetup : IAreaSetup
         fabricOneLake.AddCommand<TableNamespaceGetCommand>(serviceProvider);
         fabricOneLake.AddCommand<TableListCommand>(serviceProvider);
         fabricOneLake.AddCommand<TableGetCommand>(serviceProvider);
+
+        // Security
+        fabricOneLake.AddCommand<DataAccessRoleListCommand>(serviceProvider);
+        fabricOneLake.AddCommand<DataAccessRoleGetCommand>(serviceProvider);
+        fabricOneLake.AddCommand<DataAccessRoleCreateOrUpdateCommand>(serviceProvider);
+        fabricOneLake.AddCommand<DataAccessRoleDeleteCommand>(serviceProvider);
+        fabricOneLake.AddCommand<PrincipalAccessGetCommand>(serviceProvider);
+
+        // Shortcuts
+        fabricOneLake.AddCommand<ShortcutListCommand>(serviceProvider);
+        fabricOneLake.AddCommand<ShortcutGetCommand>(serviceProvider);
+        fabricOneLake.AddCommand<ShortcutCreateOrUpdateCommand>(serviceProvider);
+        fabricOneLake.AddCommand<ShortcutDeleteCommand>(serviceProvider);
+        fabricOneLake.AddCommand<ShortcutCacheResetCommand>(serviceProvider);
+
+        // Settings
+        fabricOneLake.AddCommand<OneLakeSettingsGetCommand>(serviceProvider);
+        fabricOneLake.AddCommand<OneLakeDiagnosticsModifyCommand>(serviceProvider);
+        fabricOneLake.AddCommand<OneLakeImmutabilityPolicyModifyCommand>(serviceProvider);
 
         return fabricOneLake;
     }

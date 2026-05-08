@@ -20,7 +20,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.File;
     Id = "0c4cf0f4-2ef4-4f1d-9f80-24fd7636d5fe",
     Name = "create_directory",
     Title = "Create OneLake Directory",
-    Description = "Creates a directory in OneLake storage. Use this when the user needs to organize files or prepare folder structures. Can create nested directory paths.",
+    Description = "Create a directory in OneLake; supports nested paths (intermediate directories are created). Requires `OneLake.ReadWrite.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

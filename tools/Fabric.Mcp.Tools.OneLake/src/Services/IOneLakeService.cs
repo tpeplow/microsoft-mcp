@@ -47,3 +47,4 @@ public interface IOneLakeService
     Task<TableListResult> ListTablesAsync(string workspaceIdentifier, string itemIdentifier, string namespaceName, CancellationToken cancellationToken = default);
     Task<TableGetResult> GetTableAsync(string workspaceIdentifier, string itemIdentifier, string namespaceName, string tableName, CancellationToken cancellationToken = default);
 }
+

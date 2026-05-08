@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Table;
     Id = "173cfc00-7c12-486d-a0e7-c0d4c1de23fd",
     Name = "list_table_namespaces",
     Title = "List OneLake Table Namespaces",
-    Description = "Lists table namespaces in OneLake. Use this when the user needs to discover available table namespaces.",
+    Description = "List the namespaces (schemas) exposed by an item's OneLake Table API. Call this first whenever you don't already know the namespace, then pass the result to `onelake_list_tables`. Most Lakehouses return a single namespace (`dbo`); Warehouses can have several. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

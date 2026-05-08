@@ -16,7 +16,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.File;
     Id = "86991cd6-75fa-4870-9d99-f986ba9f5f73",
     Name = "delete_directory",
     Title = "Delete OneLake Directory",
-    Description = "Deletes a directory from OneLake storage. Use this when the user wants to remove a folder. Use recursive flag to delete non-empty directories.",
+    Description = "Delete a directory from OneLake. Destructive. Pass `recursive=true` to delete non-empty directories — without it, non-empty deletes fail. Requires `OneLake.ReadWrite.All`.",
     Destructive = true,
     Idempotent = true,
     LocalRequired = false,

@@ -14,7 +14,7 @@ public class OneLakeItemDataListCommandTests : CommandUnitTestsBase<OneLakeItemD
     {
         Assert.Equal("list_items_dfs", Command.Name);
         Assert.Equal("List OneLake Items (Data API)", Command.Title);
-        Assert.Contains("OneLake DFS", Command.Description);
+        Assert.Contains("DFS-style", Command.Description);
         Assert.True(Command.Metadata.ReadOnly);
         Assert.False(Command.Metadata.Destructive);
         Assert.True(Command.Metadata.Idempotent);

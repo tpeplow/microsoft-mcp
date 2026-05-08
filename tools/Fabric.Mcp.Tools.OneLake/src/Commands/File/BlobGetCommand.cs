@@ -18,7 +18,7 @@ using Microsoft.Mcp.Core.Options;
     Id = "75d6cb4c-4e81-4e69-a4ec-eca53a7dacd9",
     Name = "download_file",
     Title = "Download OneLake File",
-    Description = "Downloads a file from OneLake storage. Use this when the user needs to retrieve file content or metadata. Returns base64 content, metadata, and text when applicable.",
+    Description = "Download a single file from OneLake. Returns content as base64 plus content-type, and decoded text where the file is text/JSON/CSV. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

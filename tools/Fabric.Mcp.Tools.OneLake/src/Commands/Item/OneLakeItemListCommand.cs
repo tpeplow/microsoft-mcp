@@ -20,7 +20,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Item;
     Id = "61eb86d8-3879-4d2d-969a-6c96f2e0ce0d",
     Name = "list_items",
     Title = "List OneLake Items",
-    Description = "Lists OneLake items in a Fabric workspace using the high-level OneLake API. Use this when the user needs to see what items exist in a workspace. Returns item names, types, and metadata.",
+    Description = "Enumerate OneLake items in a single, known workspace. Use this only when the user has already named a workspace and wants its full inventory. For finding items by name, description, or item type — across workspaces or within one — use `core_search_catalog` from the hosted Fabric Core MCP server instead; it is tenant-wide, server-side, and supports an OData `Type` filter. Avoid the list-then-grep pattern. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

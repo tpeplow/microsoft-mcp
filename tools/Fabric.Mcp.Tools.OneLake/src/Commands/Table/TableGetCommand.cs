@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Table;
     Id = "19bb5a6a-2a09-410c-bfa0-312986c6acc6",
     Name = "get_table",
     Title = "Get OneLake Table",
-    Description = "Retrieves table definition from OneLake. Use this when the user needs table schema or metadata.",
+    Description = "Get schema and metadata for a single table — columns, types, row counts, statistics — without reading data. Requires a fully-qualified table identifier; call `onelake_list_tables` first if needed. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,

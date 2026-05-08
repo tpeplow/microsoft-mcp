@@ -82,3 +82,21 @@ Existing pattern to mirror (per OneLake table commands):
 - Q-BLOB: remove `blob_list` / `blob_delete` now or wait on platform team?
 - Q-PROMPTS: refresh `OneLakePrompts.cs` as part of vNext?
 - Q-SHAPES: typed models vs. `JsonElement` pass-through for write payloads?
+
+## Decision log
+
+| # | Decision | Rationale |
+|---|---|---|
+| D1 | Tool names use underscores throughout (`list_items_dfs`, not `list_items-dfs`). | Matches code already shipped; spec used a dash inconsistently. Keep GA-consistent verb_noun style. |
+| D2 | Remove `blob_list` and `blob_delete` now. Keep `BlobGetCommand` / `BlobPutCommand` classes — they're already registered as `download_file` / `upload_file` and renaming the C# class files would balloon the diff. | Spec §2.4 marks the two `blob_*` tools REMOVED. The "rename" tools are not actually removed; the file-name confusion is cosmetic and out of scope. |
+| D3 | Stay unit-test-only for vNext. No `LiveTests` csproj, no `assets.json`, no Bicep. | The OneLake tool ships unit-only today; Fabric tools haven't adopted the live-test pattern. Out of scope to change here. |
+| D4 | One big PR (not per-category). | User direction. The plan still groups work by category for review clarity. |
+| D5 | Refresh `OneLakePrompts.cs` as part of vNext. | User direction. Prompts must reflect GA naming and the search-vs-list / prerequisite-chain discipline; otherwise descriptions and prompts disagree. |
+| D6 | Include the literal word **"Preview"** in `onelake_get_principal_access`'s description (rule 6 of §3). | User confirmed. Lets agents flag the user / avoid production paths. |
+| D7 | No `--confirm` flag on `onelake_modify_immutability_policy`. The description warns the LLM the change is one-way. | Spec §3.1 and §7. Tooling-side gates fight the agent; the description is the right place. |
+| D8 | Move all Fabric Core REST calls (shortcuts, data access security, settings) into a **new `IFabricApiService` / `FabricApiService`**, separate from `OneLakeService`. | User direction. `OneLakeService` is for the OneLake storage data plane (DFS / Blob / Table endpoints, `storage.azure.com` audience). The new tools talk to `api.fabric.microsoft.com` (Fabric audience). Different audience, different surface — separating them keeps responsibilities clear and avoids one service holding two TokenCredential scopes' worth of concerns. |
+| D9 | Duplicate the `FabricEndpoints` constants locally (don't take a `Fabric.Mcp.Tools.Core` project ref). | Avoids a new cross-project dependency for two URLs and one scope; the values are stable. |
+| D10 | **Outputs:** always `JsonElement` pass-through (no typed response models for new tools). **Inputs:** `JsonElement` for resource bodies that mirror typed REST resources (data access role `definition`, shortcut `target`, diagnostics, immutability policy). Named CLI options for *operation arguments* — IDs, enums, paging knobs (e.g., `--principal-id`, `--principal-type`, `--input-path`, `--max-results`, `--shortcut-name`, `--create-or-overwrite`). | User direction (pass-through over coded contracts so API additions don't require a release). Split keeps us release-free where REST schemas drift, while preserving named LLM-discoverable options for the simple operation knobs that don't drift and that the model genuinely benefits from seeing at tool-selection time. |
+| D11 | Use a fresh GUID for each new command's `[CommandMetadata(Id = "...")]`. | Standard convention; Ids are stable identifiers. |
+| D12 | `_create_or_update_*` tools have `Idempotent=true, Destructive=false, ReadOnly=false`. `_delete_*` have `Destructive=true, Idempotent=true`. `_get_principal_access` is `ReadOnly=true, Idempotent=true` despite using POST. | Matches semantic intent rather than HTTP verb; consistent with how existing OneLake commands set these flags. |
+| D13 | Endpoint paths for Fabric REST that aren't unambiguously documented in the spec are implemented per Microsoft Learn templates with a `// TODO(vNext):` comment so a reviewer can re-verify before merge. | Avoids blocking on doc lookups; flags reverification clearly. |

@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Table;
     Id = "a86298d1-7475-4ea8-8c1b-e4c54ac2b896",
     Name = "get_table_namespace",
     Title = "Get OneLake Table Namespace",
-    Description = "Retrieves metadata for a specific table namespace. Use this when the user needs details about a namespace.",
+    Description = "Retrieve metadata for a single table namespace. Rarely needed in normal flows — prefer `onelake_list_table_namespaces` for discovery. Requires `OneLake.Read.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,
