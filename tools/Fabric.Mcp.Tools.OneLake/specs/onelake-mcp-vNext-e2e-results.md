@@ -208,8 +208,86 @@ column.
 | 8.4 | `delete_file` | ✅ pass | — |
 | 8.5 | `delete_directory` | ✅ pass | — |
 
+## Second run — refined prompt against a fresh workspace
+
+After the fixes landed and the prompt was hardened with lessons learned (new
+runner harness section + protocol rules #9 and #10 in
+[`onelake-mcp-vNext-e2e-test-prompt.md`](./onelake-mcp-vNext-e2e-test-prompt.md)),
+a second run was driven against a different workspace via the same `fabmcp.exe`
+CLI to confirm the fixes hold and to flush new findings.
+
+### Run metadata
+
+| | |
+|---|---|
+| Date | 2026-05-08 |
+| Workspace | `56e15d20-fe2e-4b27-9d33-cbfcd69ecbde` (`TomMCPEndToEndTest`) |
+| Run ID | `e2e20260508b` |
+| Test lakehouses | `e2e_data_e2e20260508b` = `4206bab8-9a85-4fc8-9f63-e23992858d72`<br>`e2e_shortcut_e2e20260508b` = `2aaf4d75-efe0-43b8-be28-b7cd57653cd5` |
+| Coverage | Phases 0 → 2.2 (paused on the new finding below; phases 3 → 8 not re-run in this iteration) |
+
+### What the second run validated
+
+| Phase | Tool | Result |
+|---|---|---|
+| 0.2 / 0.3 | `core create-item` | ✅ Both lakehouses created. Result path is `results.item.id` (now documented in the runner-harness cheat sheet). |
+| 1.1 | `list_workspaces` | ✅ New workspace appears in the list. Confirms fix #5 — `id` is the GUID, display name lives on `displayName`. |
+| 1.2 | `list_items` | ⏸ As expected — returns XML pass-through with `items: null`. Both lakehouse IDs present in `xmlResponse`. Tracked under open question §3. |
+| 1.3 | `list_items_dfs` | ✅ Returns structured `items.paths[]` with both lakehouse GUIDs. Confirms fix #7. |
+| 2.1 | `get_settings` | ✅ Returns the new structured `settings` shape (diagnostics + lifecycle). Confirms fix #1 (URL + verb). |
+
+### New finding — `modify_diagnostics` body schema is undocumented
+
+Phase 2.2 returns `400 BadRequest` (`errorCode: BadRequestMyFolder`) for every
+plausible request body shape we tried. None of the following were accepted:
+
+```json
+{ "status": "Enabled", "destinationWorkspaceId": "...", "destinationItemId": "..." }
+{ "diagnosticsState": "Enabled", "destination": { "type": "MyFolder", "workspaceId": "...", "lakehouseId": "...", "folderPath": "Files/diagnostics" } }
+{ "diagnosticsState": "Enabled", "myOneLakeFolder": { "workspaceId": "...", "lakehouseId": "...", "folderPath": "Files/diagnostics" } }
+```
+
+The current tool description (`"Update the OneLake diagnostics configuration
+for a workspace (e.g., enable/disable diagnostics, set destination)"`) does
+not reveal the request-body shape, so an LLM caller has no way to construct a
+valid body without trial and error against the live API.
+
+This validates the new protocol rule #9 (cap body-guessing at 2 attempts and
+record both as a `description` bug) — without that rule the run would have
+spun on body shapes for a long time without producing useful signal.
+
+**Follow-up needed:** confirm the canonical `modifyDiagnostics` request body
+shape against Fabric documentation or service-team contact, and bake it into
+the `modify_diagnostics` tool description (and ideally into a typed
+`--diagnostics` schema with named options instead of a free-form JSON blob).
+Add the same treatment to `create_or_update_data_access_role`, which has the
+same description gap.
+
+### Prompt hardening landed alongside this run
+
+To stop future iterations re-discovering the same issues:
+
+- `9482a0c6` — `get_shortcut` runs immediately after `create_or_update_shortcuts`
+  to fail-fast on create errors (the metadata API is immediately consistent).
+- `3d67a3d2` — Phase 4 has an explicit 30s wait step after shortcut create,
+  with the reactive retry note kept as a safety net.
+- `5bb91d0e` — Added a runner harness section (proven `Invoke-Fab` helper +
+  full response-shape cheat sheet for every tool) plus two new protocol
+  rules: #9 cap body-shape guessing at 2 attempts, #10 response-shape ground
+  rules covering field paths that bit during this run (`results.item.id`, no
+  `.results.response` wrapper, `displayName` not `name`, prefer
+  `list_items_dfs` over `list_items`, dump full envelope when a field is
+  unexpectedly null).
+
 ## Manual cleanup required
 
-OneLake item deletion is not exposed as a Fabric MCP tool today, so the two
-test lakehouses created during this run still need to be removed via the
-Fabric portal.
+OneLake item deletion is not exposed as a Fabric MCP tool today, so the test
+lakehouses created during these runs still need to be removed via the Fabric
+portal.
+
+| Workspace | Lakehouse | Item ID |
+|---|---|---|
+| `6a8b0b3c-bfe8-40d2-8adc-10e26d62f8c7` | (initial run) | `324355ad-9933-4072-8c6b-04a383188887` |
+| `6a8b0b3c-bfe8-40d2-8adc-10e26d62f8c7` | (initial run) | `4df663e7-9b51-4dac-9ac7-e438054918f7` |
+| `56e15d20-fe2e-4b27-9d33-cbfcd69ecbde` | `e2e_data_e2e20260508b` | `4206bab8-9a85-4fc8-9f63-e23992858d72` |
+| `56e15d20-fe2e-4b27-9d33-cbfcd69ecbde` | `e2e_shortcut_e2e20260508b` | `2aaf4d75-efe0-43b8-be28-b7cd57653cd5` |
