@@ -15,7 +15,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Shortcuts;
     Id = "4883d2f8-ab5d-4f37-8ac2-9e0e000a5881",
     Name = "reset_shortcut_cache",
     Title = "Reset OneLake Shortcut Cache",
-    Description = "Drop cached shortcut reads for an item, forcing the next read to re-resolve from the destination. Use sparingly — primarily for debugging stale-cache issues. Requires `OneLake.ReadWrite.All`.",
+    Description = "Drop cached shortcut reads for an entire workspace, forcing the next read to re-resolve from each shortcut's destination. Workspace-scoped — there is no per-item variant in the Fabric API. Use sparingly — primarily for debugging stale-cache issues. Requires `OneLake.ReadWrite.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,
