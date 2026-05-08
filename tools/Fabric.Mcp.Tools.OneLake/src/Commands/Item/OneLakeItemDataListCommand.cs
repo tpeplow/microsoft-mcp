@@ -2,6 +2,7 @@
 // Licensed under the MIT License.
 
 using System.Net;
+using System.Text.Json;
 using Fabric.Mcp.Tools.OneLake.Models;
 using Fabric.Mcp.Tools.OneLake.Options;
 using Fabric.Mcp.Tools.OneLake.Services;
@@ -82,7 +83,21 @@ public sealed class OneLakeItemDataListCommand(
                 continuationToken: options.ContinuationToken,
                 cancellationToken);
 
-            var result = new OneLakeItemDataListCommandResult { JsonResponse = jsonResponse };
+            JsonElement? parsed = null;
+            if (!string.IsNullOrWhiteSpace(jsonResponse))
+            {
+                try
+                {
+                    using var doc = JsonDocument.Parse(jsonResponse);
+                    parsed = doc.RootElement.Clone();
+                }
+                catch (JsonException ex)
+                {
+                    _logger.LogWarning(ex, "Failed to parse list_items_dfs response as JSON; returning raw text.");
+                }
+            }
+
+            var result = new OneLakeItemDataListCommandResult { Items = parsed, JsonResponse = parsed.HasValue ? null : jsonResponse };
             context.Response.Results = ResponseResult.Create(result, OneLakeJsonContext.Default.OneLakeItemDataListCommandResult);
         }
         catch (Exception ex)
@@ -114,6 +129,7 @@ public sealed class OneLakeItemDataListCommand(
 
     public sealed record OneLakeItemDataListCommandResult
     {
+        public JsonElement? Items { get; init; }
         public string? JsonResponse { get; init; }
     }
 }
