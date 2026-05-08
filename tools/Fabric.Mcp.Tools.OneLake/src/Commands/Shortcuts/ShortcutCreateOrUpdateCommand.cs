@@ -16,7 +16,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Shortcuts;
     Id = "afc1d19d-3d1b-49cb-8191-2a7808ea8a11",
     Name = "create_or_update_shortcuts",
     Title = "Create Or Update OneLake Shortcuts",
-    Description = "Create one or more shortcuts in a single call (the underlying API is bulk-only — there is no separate single-shortcut create). By default, fails if any shortcut already exists; pass `createOrOverwrite=true` to upsert. Use this for both initial creation and updates. Requires `OneLake.ReadWrite.All`.",
+    Description = "Create one or more shortcuts in a single call. Pass `--definition` with a JSON body containing either a single shortcut object or an array of shortcuts. By default, fails if any shortcut already exists; pass `createOrOverwrite=true` to upsert. Use this for both initial creation and updates. Note: newly created shortcuts can take ~30 seconds to become consistent for listing operations (e.g. `list_files` against the shortcut path), though direct path-based reads work immediately. Requires `OneLake.ReadWrite.All`.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,
