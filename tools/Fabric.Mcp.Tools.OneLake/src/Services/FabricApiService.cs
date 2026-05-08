@@ -208,7 +208,7 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         CancellationToken cancellationToken = default)
     {
         var workspaceId = NormalizeWorkspace(workspaceIdentifier);
-        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/onelakeSettings";
+        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/onelake/settings";
         return await SendJsonAsync(HttpMethod.Get, url, jsonContent: null, headers: null, cancellationToken);
     }
 
@@ -218,9 +218,8 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         CancellationToken cancellationToken = default)
     {
         var workspaceId = NormalizeWorkspace(workspaceIdentifier);
-        // TODO(vNext): verify PATCH vs PUT against the Fabric REST docs.
-        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/onelakeSettings/diagnostics";
-        return await SendJsonAsync(HttpMethod.Patch, url, payload.GetRawText(), headers: null, cancellationToken);
+        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/onelake/settings/modifyDiagnostics";
+        return await SendJsonAsync(HttpMethod.Post, url, payload.GetRawText(), headers: null, cancellationToken);
     }
 
     public async Task<JsonElement> ModifyOneLakeImmutabilityPolicyAsync(
@@ -229,9 +228,8 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         CancellationToken cancellationToken = default)
     {
         var workspaceId = NormalizeWorkspace(workspaceIdentifier);
-        // TODO(vNext): verify PATCH vs PUT against the Fabric REST docs.
-        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/onelakeSettings/immutabilityPolicy";
-        return await SendJsonAsync(HttpMethod.Patch, url, payload.GetRawText(), headers: null, cancellationToken);
+        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/onelake/settings/modifyImmutabilityPolicy";
+        return await SendJsonAsync(HttpMethod.Post, url, payload.GetRawText(), headers: null, cancellationToken);
     }
 
     // ------------------- Helpers -------------------
