@@ -34,7 +34,7 @@ public sealed class PathListCommand(ILogger<PathListCommand> logger)
         command.Options.Add(FabricOptionDefinitions.Workspace.AsOptional());
         command.Options.Add(FabricOptionDefinitions.ItemId.AsOptional());
         command.Options.Add(FabricOptionDefinitions.Item.AsOptional());
-        command.Options.Add(FabricOptionDefinitions.Path.AsOptional());
+        command.Options.Add(FabricOptionDefinitions.DirectoryPath.AsOptional());
         command.Options.Add(FabricOptionDefinitions.Recursive.AsOptional());
         command.Options.Add(OneLakeOptionDefinitions.Format.AsOptional());
         command.Validators.Add(result =>
@@ -71,7 +71,7 @@ public sealed class PathListCommand(ILogger<PathListCommand> logger)
             ? itemId!
             : itemName ?? string.Empty;
 
-        options.Path = parseResult.GetValueOrDefault<string>(FabricOptionDefinitions.Path.Name);
+        options.Path = parseResult.GetValueOrDefault<string>(FabricOptionDefinitions.DirectoryPath.Name);
         options.Recursive = parseResult.GetValueOrDefault<bool>(FabricOptionDefinitions.Recursive.Name);
         options.Format = parseResult.GetValueOrDefault<string>(OneLakeOptionDefinitions.Format.Name);
         return options;
