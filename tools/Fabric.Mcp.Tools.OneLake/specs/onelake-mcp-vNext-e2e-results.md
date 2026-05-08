@@ -236,7 +236,7 @@ CLI to confirm the fixes hold and to flush new findings.
 | 1.3 | `list_items_dfs` | ✅ Returns structured `items.paths[]` with both lakehouse GUIDs. Confirms fix #7. |
 | 2.1 | `get_settings` | ✅ Returns the new structured `settings` shape (diagnostics + lifecycle). Confirms fix #1 (URL + verb). |
 
-### New finding — `modify_diagnostics` body schema is undocumented
+### New finding — `modify_diagnostics` body schema is undocumented (resolved)
 
 Phase 2.2 returns `400 BadRequest` (`errorCode: BadRequestMyFolder`) for every
 plausible request body shape we tried. None of the following were accepted:
@@ -247,21 +247,43 @@ plausible request body shape we tried. None of the following were accepted:
 { "diagnosticsState": "Enabled", "myOneLakeFolder": { "workspaceId": "...", "lakehouseId": "...", "folderPath": "Files/diagnostics" } }
 ```
 
-The current tool description (`"Update the OneLake diagnostics configuration
-for a workspace (e.g., enable/disable diagnostics, set destination)"`) does
-not reveal the request-body shape, so an LLM caller has no way to construct a
+The previous tool description (`"Update the OneLake diagnostics configuration
+for a workspace (e.g., enable/disable diagnostics, set destination)"`) did
+not reveal the request-body shape, so an LLM caller had no way to construct a
 valid body without trial and error against the live API.
 
-This validates the new protocol rule #9 (cap body-guessing at 2 attempts and
+This validated the new protocol rule #9 (cap body-guessing at 2 attempts and
 record both as a `description` bug) — without that rule the run would have
 spun on body shapes for a long time without producing useful signal.
 
-**Follow-up needed:** confirm the canonical `modifyDiagnostics` request body
-shape against Fabric documentation or service-team contact, and bake it into
-the `modify_diagnostics` tool description (and ideally into a typed
-`--diagnostics` schema with named options instead of a free-form JSON blob).
-Add the same treatment to `create_or_update_data_access_role`, which has the
-same description gap.
+**Resolution:** the canonical body shape is published in the Fabric REST docs:
+[learn.microsoft.com/en-us/rest/api/fabric/core/onelake-settings/modify-diagnostics](https://learn.microsoft.com/en-us/rest/api/fabric/core/onelake-settings/modify-diagnostics).
+The required shape is:
+
+```json
+{
+  "status": "Enabled",
+  "destination": {
+    "type": "Lakehouse",
+    "lakehouse": {
+      "referenceType": "ById",
+      "itemId": "<lakehouse-guid>",
+      "workspaceId": "<workspace-guid>"
+    }
+  }
+}
+```
+
+Disable is just `{ "status": "Disabled" }`. Source and destination workspace
+must be in the same capacity. Verified end-to-end against the live workspace:
+the documented body succeeds and `get_settings` reflects
+`diagnostics.status = "Enabled"` with the supplied destination. Description
+updated in commit `4d1720a6`.
+
+**Recommended follow-up:** mirror the same description treatment on
+`create_or_update_data_access_role`, which still has an underspecified
+`--definition` body shape (a likely source of the same friction during
+Phase 6.2 of any future run).
 
 ### Prompt hardening landed alongside this run
 
