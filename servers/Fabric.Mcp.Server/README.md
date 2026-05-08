@@ -237,22 +237,64 @@ The Fabric MCP Server exposes tools organized into three categories:
 
 ### OneLake Data Operations
 
+OneLake exposes a large surface — files, tables, shortcuts, data access security, and workspace settings — grouped below for readability.
+
+#### Workspace and item discovery
+
 | Tool Name | Description |
 |-----------|-------------|
-| `onelake_list_workspaces` | Lists available Microsoft Fabric workspaces. |
-| `onelake_list_items` | Lists workspace items with high-level metadata. |
-| `onelake_list_items_dfs` | Lists Fabric items via the DFS endpoint. |
-| `onelake_list_files` | Lists files using the hierarchical file-list endpoint. |
-| `onelake_download_file` | Downloads a OneLake file. |
-| `onelake_upload_file` | Uploads a file to OneLake storage. |
-| `onelake_delete_file` | Deletes a file from OneLake storage. |
-| `onelake_create_directory` | Creates a directory via the DFS endpoint. |
-| `onelake_delete_directory` | Deletes a directory (optionally recursive). |
-| `onelake_get_table_config` | Retrieves table API configuration for a workspace item. |
-| `onelake_list_table_namespaces` | Lists table namespaces (schemas) exposed through the table API. |
-| `onelake_get_table_namespace` | Retrieves metadata for a specific namespace. |
-| `onelake_list_tables` | Lists tables published within a namespace. |
-| `onelake_get_table` | Retrieves the definition for a specific table. |
+| `onelake_list_workspaces` | Enumerate Fabric workspaces accessible via the OneLake data plane. For finding a workspace by name, prefer `core_search_catalog` from the hosted Fabric Core MCP server. |
+| `onelake_list_items` | Enumerate OneLake items in a single, known workspace. For finding items by name/type across workspaces, prefer `core_search_catalog`. |
+| `onelake_list_items_dfs` | DFS-style enumeration of items in a workspace, returning DFS paths suitable for downstream file IO. |
+
+#### Files and directories
+
+| Tool Name | Description |
+|-----------|-------------|
+| `onelake_list_files` | Hierarchical listing of files and directories under a OneLake path. |
+| `onelake_download_file` | Download a single file. Returns base64 plus content-type, with decoded text for textual files. |
+| `onelake_upload_file` | Upload a file from inline content or a local path. Overwrites by default. |
+| `onelake_delete_file` | Delete a single file (destructive, not recoverable). |
+| `onelake_create_directory` | Create a directory; supports nested paths. |
+| `onelake_delete_directory` | Delete a directory. Pass `recursive=true` for non-empty deletes. |
+
+#### Tables (OneLake Table API)
+
+| Tool Name | Description |
+|-----------|-------------|
+| `onelake_list_table_namespaces` | List the namespaces (schemas) exposed by an item's Table API. Lakehouses typically expose `dbo`. |
+| `onelake_get_table_namespace` | Retrieve metadata for a single namespace. |
+| `onelake_list_tables` | List tables within a namespace. |
+| `onelake_get_table` | Get schema and metadata for a single table without reading data. |
+| `onelake_get_table_config` | Retrieve the Table API configuration (storage format, partitioning, file layout). |
+
+#### Shortcuts
+
+| Tool Name | Description |
+|-----------|-------------|
+| `onelake_list_shortcuts` | List shortcuts within an item, recursing through subfolders. |
+| `onelake_get_shortcut` | Get the properties of a single shortcut. |
+| `onelake_create_or_update_shortcuts` | Create one or more shortcuts in a single call. Pass `--definition` with a single shortcut object or an array. Newly created shortcuts can take ~30s to appear in listings; direct path-based reads work immediately. |
+| `onelake_delete_shortcut` | Delete a single shortcut (the target data is preserved). |
+| `onelake_reset_shortcut_cache` | Drop cached shortcut reads for a workspace, forcing the next read to re-resolve. Workspace-scoped. |
+
+#### Data access security
+
+| Tool Name | Description |
+|-----------|-------------|
+| `onelake_list_data_access_roles` | List all OneLake data access roles defined on an item, with their decision rules and members. |
+| `onelake_get_data_access_role` | Get the full definition of a single role. |
+| `onelake_create_or_update_data_access_role` | Create or replace a role. Role names must start with a letter and contain only letters/digits. |
+| `onelake_delete_data_access_role` | Delete a OneLake data access role. |
+| `onelake_get_principal_access` | Preview: report the effective OneLake permissions a given principal has on an item. |
+
+#### Workspace settings
+
+| Tool Name | Description |
+|-----------|-------------|
+| `onelake_get_settings` | Get OneLake-level workspace settings (diagnostics, immutability policy, etc.). |
+| `onelake_modify_diagnostics` | Update OneLake diagnostics for a workspace. Source and destination must be in the same capacity. Returns 202 (long-running operation). |
+| `onelake_modify_immutability_policy` | Update the OneLake immutability policy. **Warning**: enabling immutability is irreversible. |
 
 ### Core Fabric Operations
 
