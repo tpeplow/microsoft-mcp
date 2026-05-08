@@ -154,19 +154,21 @@ and keep going.
      `Files/e2e/${RUN_ID}/` on the data lakehouse. (Both items live in the
      same workspace — this is a OneLake → OneLake shortcut, no external
      credentials needed.) Use `createOrOverwrite=true`.
-4.2  Wait 30 seconds before exercising the shortcut. Newly created
-     shortcuts have a ~30s eventual-consistency window before listing
-     operations against them are reliable. Reads through the shortcut
-     path still work immediately, but `list_files` at the shortcut root
-     can return empty/404 during this window.
-4.3  Call `list_shortcuts` on the shortcut lakehouse.
-     ASSERT: `data_${RUN_ID}` appears with the expected target.
-4.4  Call `get_shortcut` for `data_${RUN_ID}` at `Files/` on the shortcut
-     lakehouse.
+4.2  Call `get_shortcut` for `data_${RUN_ID}` at `Files/` on the shortcut
+     lakehouse. This validates the create succeeded — the shortcut
+     metadata API is immediately consistent (only the listing path has
+     the 30s window).
      ASSERT: target matches what 4.1 sent.
+4.3  Wait 30 seconds before exercising the shortcut for reads. Newly
+     created shortcuts have a ~30s eventual-consistency window before
+     listing operations against them are reliable. Reads through the
+     shortcut path still work immediately, but `list_files` at the
+     shortcut root can return empty/404 during this window.
+4.4  Call `list_shortcuts` on the shortcut lakehouse.
+     ASSERT: `data_${RUN_ID}` appears with the expected target.
 4.5  Call `list_files` for `Files/data_${RUN_ID}/` on the **shortcut**
      lakehouse.
-     NOTE: if this still returns empty/404 despite the 30s wait in 4.2,
+     NOTE: if this still returns empty/404 despite the 30s wait in 4.3,
      sleep another 30s and retry once before failing.
      ASSERT: `payload.json` shows up via the shortcut.
 4.6  Call `download_file` for `Files/data_${RUN_ID}/payload.json` on the
