@@ -53,80 +53,99 @@ lakehouse IDs in the cleanup section so you can drop them via the Fabric portal
 manually. The prompt also explicitly avoids `modify_immutability_policy`
 because immutable-data cleanup is a tenant-admin headache.
 
-## Optional: PowerShell runner harness (for direct CLI driving)
+## Deterministic CLI runner — `run-e2e.ps1`
 
-When you want to drive the test from a PowerShell session against the built
-`fabmcp.exe` (no chat client / no MCP server install), use this helper. It has
-been hardened against the response-shape gotchas listed below — extend it
-rather than reinventing it so future runs benefit from prior pain.
+A checked-in PowerShell harness that drives this prompt against the built
+`fabmcp.exe` lives at:
+
+    tools/Fabric.Mcp.Tools.OneLake/specs/run-e2e.ps1
+
+That script is the **deterministic** path through this prompt — same workspace,
+same phases, same assertions, same transcript format every time. Use it
+whenever you want a reproducible signal (CI, ralph loop, pre-PR sanity check)
+without depending on an LLM in the loop.
+
+### Provenance and maintenance model
+
+`run-e2e.ps1` is a **generated artifact of this prompt**, not the source of
+truth. The contract is:
+
+1. This markdown file describes the test plan, response shapes, protocol
+   rules, and assertions. Edit it when behaviour changes.
+2. `run-e2e.ps1` is regenerated from this prompt by an LLM session whenever
+   the prompt grows new tools, new phases, or new assertions. Do not treat the
+   script as primary — if the script and the prompt disagree, the prompt wins
+   and the script gets re-derived.
+3. The script preserves hard-won implementation knowledge (response-shape
+   gotchas, PS5 vs PS7 traps, Fabric body schemas, role-name validation,
+   30s shortcut consistency wait, etc.). When you regenerate, mine the
+   previous version for those gotchas before discarding it.
+
+This way the prompt stays a high-signal English description of the test, and
+the script stays a low-friction way to execute it deterministically as the
+tool surface grows.
+
+### Run it
 
 ```powershell
-# --- inputs ---
-$env:WS       = '<workspace-guid>'
-$env:RUN_ID   = '<run_id>'           # e.g. e2e20260508a
-$env:PRINCIPAL= '<principal-object-id>'
-$env:FABMCP   = 'C:\src\microsoft-mcp\servers\Fabric.Mcp.Server\src\bin\Debug\fabmcp.exe'
-
-# --- helper: invoke fabmcp and parse the JSON envelope ---
-function Invoke-Fab {
-    param([Parameter(ValueFromRemainingArguments)] [string[]]$Args)
-    $errFile = [IO.Path]::GetTempFileName()
-    $raw = & $env:FABMCP @Args 2>$errFile | Out-String
-    $raw = $raw.Trim()
-    Remove-Item $errFile -ErrorAction SilentlyContinue
-    # The CLI prefixes the JSON envelope with HTTP info logs. Find the JSON
-    # object start by the '"status"' marker so ConvertFrom-Json doesn't choke.
-    $m = [regex]::Match($raw, '(?ms)^\{[\r\n]+\s*"status"')
-    $jsonText = if ($m.Success) { $raw.Substring($m.Index).Trim() } else { $raw }
-    try {
-        $obj = $jsonText | ConvertFrom-Json -Depth 30
-        return @{ Raw=$raw; Json=$obj; Ok=($obj.status -ge 200 -and $obj.status -lt 300) }
-    } catch {
-        return @{ Raw=$raw; Json=$null; Ok=$false; ParseError=$_.Exception.Message }
-    }
-}
-
-# --- response-shape cheat sheet (DO NOT GUESS — these have bitten before) ---
-# All fabmcp commands return: { status, message, results: { ... }, duration }
-# The payload lives directly under `.results` — there is NO `.results.response`
-# wrapper layer. Field names below are the ones that actually exist:
-#
-#   core create-item        -> $r.Json.results.item.id
-#                              $r.Json.results.item.displayName
-#   onelake list_workspaces -> $r.Json.results.workspaces[].id
-#                              $r.Json.results.workspaces[].displayName  (NOT .name)
-#   onelake list_items      -> $r.Json.results.xmlResponse  (raw XML pass-through;
-#                              the .items field is currently null — see 1.2 below)
-#   onelake list_items_dfs  -> $r.Json.results.items.paths[].name
-#   onelake list_files      -> $r.Json.results.files[]      (uses --directory-path,
-#                                                            NOT --path)
-#   onelake list_table_namespaces -> $r.Json.results.namespaces[]   (flat array)
-#   onelake get_settings    -> $r.Json.results.settings.diagnostics
-#   onelake create_or_update_shortcuts -> see Phase 4 — body shape is documented
-#                              in the tool description; pass --definition with
-#                              either a single object or an array.
-#
-# Error envelope (status >= 400) puts the upstream Fabric error in:
-#   $r.Json.results.error.message    (full upstream JSON, as a string)
-#   $r.Json.results.error.type
-#
-# Capture both the raw envelope AND your inputs into the report — never just
-# the boolean pass/fail.
-
-# --- example: Phase 0 + 1 ---
-$r = Invoke-Fab core create-item --workspace $env:WS `
-        --display-name "e2e_data_$($env:RUN_ID)" --item-type Lakehouse
-$DATA = $r.Json.results.item.id
-
-$r = Invoke-Fab onelake list_workspaces
-$wsHit = $r.Json.results.workspaces | Where-Object { $_.id -eq $env:WS }
-
-$r = Invoke-Fab onelake list_items_dfs --workspace-id $env:WS
-$paths = $r.Json.results.items.paths
+# Requires PowerShell 7+ (pwsh). Windows PowerShell 5.1 will not work
+# (`ConvertFrom-Json -Depth` needs PS6+).
+dotnet build servers/Fabric.Mcp.Server/src
+az login
+pwsh -NoProfile -ExecutionPolicy Bypass `
+     -File tools/Fabric.Mcp.Tools.OneLake/specs/run-e2e.ps1 `
+     -WorkspaceId  <workspace-guid> `
+     -PrincipalId  <entra-object-guid> `
+     -TenantId     <entra-tenant-guid>
 ```
 
-Save this harness alongside any per-run state (lakehouse IDs, workspace ID,
-principal) so the next session can resume without re-deriving everything.
+A per-run transcript is written to
+`tools/Fabric.Mcp.Tools.OneLake/specs/runs/onelake-e2e-<RUN_ID>.md` (the runs
+folder is gitignored — keep transcripts as local artifacts, copy snippets into
+the results doc for anything noteworthy).
+
+### Response-shape cheat sheet (DO NOT GUESS — these have bitten before)
+
+All `fabmcp` commands return: `{ status, message, results: { ... }, duration }`.
+The payload lives directly under `.results` — there is NO `.results.response`
+wrapper layer. Field names below are the ones that actually exist:
+
+    core create-item              -> .results.item.id / .item.displayName
+    onelake list_workspaces       -> .results.workspaces[].id
+                                     .results.workspaces[].displayName  (NOT .name)
+    onelake list_items            -> .results.xmlResponse  (raw XML pass-through;
+                                     .items is currently null - open question)
+    onelake list_items_dfs        -> .results.items.paths[].name
+    onelake list_files            -> .results.items[].name / .size  (uses
+                                     --directory-path, NOT --path; NOT .files)
+    onelake list_shortcuts        -> .results.shortcuts.value[].name
+    onelake get_shortcut          -> .results.shortcut.target.oneLake.itemId
+    onelake list_table_namespaces -> .results.namespaces[]                (flat)
+    onelake list_tables           -> .results.tables.identifiers[]
+    onelake get_settings          -> .results.settings.diagnostics
+    onelake download_file         -> .results.blob.contentBase64          (decode
+                                     to compare; there is no decodedText field)
+    onelake list_data_access_roles-> .results.roles.value[].name
+
+Error envelope (status >= 400) puts the upstream Fabric error string in
+`.results.message` plus a stack trace; outer `.status` mirrors the upstream
+HTTP code (after the EnsureSuccessAsync status-preservation fixes).
+
+### Tool body-shape gotchas (encoded in the script — keep them)
+
+- `modify_diagnostics`: `{ status, destination: { type:"Lakehouse",
+  lakehouse: { referenceType:"ById", itemId, workspaceId } } }`. Disable form
+  is `{ status: "Disabled" }`. Returns 202 LRO.
+- `create_or_update_data_access_role`:
+  - Role **name** must start with a letter and contain ONLY letters and
+    digits — no underscores or hyphens (Fabric returns 400
+    `RequestBodyValidationFailed` otherwise).
+  - `permission` array must contain BOTH an `Action` attribute and a `Path`
+    attribute or Fabric returns 400 `PolicyValidationError: Array
+    'permission' must have 2 elements`.
+  - `tenantId` MUST be a real GUID, not a placeholder.
+- Shortcut listing has a ~30 second eventual-consistency window; metadata
+  (`get_shortcut`) is immediately consistent — see Phase 4 ordering.
 
 ---
 
