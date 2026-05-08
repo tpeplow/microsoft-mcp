@@ -9,5 +9,4 @@ namespace Fabric.Mcp.Tools.OneLake.Models;
 public sealed record TableNamespaceListResult(
     [property: JsonPropertyName("workspace")] string Workspace,
     [property: JsonPropertyName("item")] string Item,
-    [property: JsonPropertyName("namespaces")] JsonElement Namespaces,
-    [property: JsonPropertyName("rawResponse")] string RawResponse);
+    [property: JsonPropertyName("namespaces")] IReadOnlyList<string> Namespaces);

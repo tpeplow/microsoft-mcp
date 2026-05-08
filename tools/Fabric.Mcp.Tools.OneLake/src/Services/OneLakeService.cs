@@ -382,9 +382,26 @@ public class OneLakeService(HttpClient httpClient, TokenCredential? credential =
         }
 
         using var document = JsonDocument.Parse(rawResponse);
-        var namespaces = document.RootElement.Clone();
+        var namespaces = new List<string>();
+        if (document.RootElement.TryGetProperty("namespaces", out var nsArray) && nsArray.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var entry in nsArray.EnumerateArray())
+            {
+                if (entry.ValueKind == JsonValueKind.Array)
+                {
+                    var parts = entry.EnumerateArray()
+                        .Where(e => e.ValueKind == JsonValueKind.String)
+                        .Select(e => e.GetString() ?? string.Empty);
+                    namespaces.Add(string.Join('.', parts));
+                }
+                else if (entry.ValueKind == JsonValueKind.String)
+                {
+                    namespaces.Add(entry.GetString() ?? string.Empty);
+                }
+            }
+        }
 
-        return new TableNamespaceListResult(normalizedWorkspaceId, normalizedItemIdentifier, namespaces, rawResponse);
+        return new TableNamespaceListResult(normalizedWorkspaceId, normalizedItemIdentifier, namespaces);
     }
 
     public async Task<TableNamespaceGetResult> GetTableNamespaceAsync(string workspaceIdentifier, string itemIdentifier, string namespaceName, CancellationToken cancellationToken = default)

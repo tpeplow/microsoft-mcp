@@ -84,7 +84,7 @@ public sealed class TableNamespaceListCommand(
                 : options.Item;
 
             var namespaceResult = await _oneLakeService.ListTableNamespacesAsync(workspaceIdentifier!, itemIdentifier!, cancellationToken);
-            var result = new TableNamespaceListCommandResult(namespaceResult.Workspace, namespaceResult.Item, namespaceResult.Namespaces, namespaceResult.RawResponse);
+            var result = new TableNamespaceListCommandResult(namespaceResult.Workspace, namespaceResult.Item, namespaceResult.Namespaces);
             context.Response.Results = ResponseResult.Create(result, OneLakeJsonContext.Default.TableNamespaceListCommandResult);
         }
         catch (Exception ex)
@@ -100,19 +100,17 @@ public sealed class TableNamespaceListCommand(
     {
         public string Workspace { get; init; } = string.Empty;
         public string Item { get; init; } = string.Empty;
-        public JsonElement Namespaces { get; init; } = default;
-        public string RawResponse { get; init; } = string.Empty;
+        public IReadOnlyList<string> Namespaces { get; init; } = [];
 
         public TableNamespaceListCommandResult()
         {
         }
 
-        public TableNamespaceListCommandResult(string workspace, string item, JsonElement namespaces, string rawResponse)
+        public TableNamespaceListCommandResult(string workspace, string item, IReadOnlyList<string> namespaces)
         {
             Workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             Item = item ?? throw new ArgumentNullException(nameof(item));
-            Namespaces = namespaces;
-            RawResponse = rawResponse ?? string.Empty;
+            Namespaces = namespaces ?? [];
         }
     }
 }
