@@ -36,3 +36,7 @@ eng/tools/CopilotCliTester/src/results/
 
 # VM-specific documentation (internal/personal notes)
 docs/vm-docs/
+
+# OneLake MCP per-run E2E transcripts (local only  keep README tracked)
+tools/Fabric.Mcp.Tools.OneLake/specs/runs/*
+!tools/Fabric.Mcp.Tools.OneLake/specs/runs/README.md
