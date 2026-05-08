@@ -156,6 +156,11 @@ public class OneLakeService(HttpClient httpClient, TokenCredential? credential =
                         WorkspaceObjectId = metadataElement.Element("WorkspaceObjectId")?.Value,
                         WorkspacePortalUrl = metadataElement.Element("WorkspacePortalUrl")?.Value
                     };
+
+                    if (!string.IsNullOrWhiteSpace(workspace.Metadata.WorkspaceObjectId))
+                    {
+                        workspace.Id = workspace.Metadata.WorkspaceObjectId!;
+                    }
                 }
 
                 return workspace;
