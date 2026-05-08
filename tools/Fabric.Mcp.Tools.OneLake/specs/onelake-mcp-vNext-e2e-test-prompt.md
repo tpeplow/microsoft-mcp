@@ -161,6 +161,11 @@ and keep going.
      ASSERT: target matches what 4.1 sent.
 4.4  Call `list_files` for `Files/data_${RUN_ID}/` on the **shortcut**
      lakehouse.
+     NOTE: newly created shortcuts can take ~30 seconds to become
+     consistent for listing. If this call returns an empty list or 404,
+     sleep 30s and retry up to ~60s before treating it as a failure.
+     Direct path-based reads (e.g. step 4.5) typically succeed
+     immediately even while listing is still catching up.
      ASSERT: `payload.json` shows up via the shortcut.
 4.5  Call `download_file` for `Files/data_${RUN_ID}/payload.json` on the
      shortcut lakehouse.
