@@ -16,7 +16,7 @@ namespace Fabric.Mcp.Tools.OneLake.Commands.Settings;
     Id = "aead3a70-5cee-4e8e-bcf6-7e1d4c59f0d5",
     Name = "modify_diagnostics",
     Title = "Modify OneLake Diagnostics Settings",
-    Description = "Update the OneLake diagnostics configuration for a workspace (e.g., enable/disable diagnostics, set destination). Requires `Workspace.ReadWrite.All`.",
+    Description = "Update the OneLake diagnostics configuration for a workspace. Pass `--diagnostics` with a JSON body matching the Fabric `modifyDiagnostics` API shape: `{ \"status\": \"Enabled\"|\"Disabled\", \"destination\": { \"type\": \"Lakehouse\", \"lakehouse\": { \"referenceType\": \"ById\", \"itemId\": \"<lakehouse-guid>\", \"workspaceId\": \"<workspace-guid>\" } } }`. To disable, only `status` is required. To replace the destination, send the full destination block. The destination workspace must be in the same capacity as the source. Requires admin role on the source workspace and contributor (or above) on the destination, plus `OneLake.ReadWrite.All`. Returns 202 (long-running operation) on success.",
     Destructive = false,
     Idempotent = true,
     LocalRequired = false,
