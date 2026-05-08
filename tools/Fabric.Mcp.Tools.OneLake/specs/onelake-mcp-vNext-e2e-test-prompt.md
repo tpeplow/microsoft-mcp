@@ -53,6 +53,81 @@ lakehouse IDs in the cleanup section so you can drop them via the Fabric portal
 manually. The prompt also explicitly avoids `modify_immutability_policy`
 because immutable-data cleanup is a tenant-admin headache.
 
+## Optional: PowerShell runner harness (for direct CLI driving)
+
+When you want to drive the test from a PowerShell session against the built
+`fabmcp.exe` (no chat client / no MCP server install), use this helper. It has
+been hardened against the response-shape gotchas listed below — extend it
+rather than reinventing it so future runs benefit from prior pain.
+
+```powershell
+# --- inputs ---
+$env:WS       = '<workspace-guid>'
+$env:RUN_ID   = '<run_id>'           # e.g. e2e20260508a
+$env:PRINCIPAL= '<principal-object-id>'
+$env:FABMCP   = 'C:\src\microsoft-mcp\servers\Fabric.Mcp.Server\src\bin\Debug\fabmcp.exe'
+
+# --- helper: invoke fabmcp and parse the JSON envelope ---
+function Invoke-Fab {
+    param([Parameter(ValueFromRemainingArguments)] [string[]]$Args)
+    $errFile = [IO.Path]::GetTempFileName()
+    $raw = & $env:FABMCP @Args 2>$errFile | Out-String
+    $raw = $raw.Trim()
+    Remove-Item $errFile -ErrorAction SilentlyContinue
+    # The CLI prefixes the JSON envelope with HTTP info logs. Find the JSON
+    # object start by the '"status"' marker so ConvertFrom-Json doesn't choke.
+    $m = [regex]::Match($raw, '(?ms)^\{[\r\n]+\s*"status"')
+    $jsonText = if ($m.Success) { $raw.Substring($m.Index).Trim() } else { $raw }
+    try {
+        $obj = $jsonText | ConvertFrom-Json -Depth 30
+        return @{ Raw=$raw; Json=$obj; Ok=($obj.status -ge 200 -and $obj.status -lt 300) }
+    } catch {
+        return @{ Raw=$raw; Json=$null; Ok=$false; ParseError=$_.Exception.Message }
+    }
+}
+
+# --- response-shape cheat sheet (DO NOT GUESS — these have bitten before) ---
+# All fabmcp commands return: { status, message, results: { ... }, duration }
+# The payload lives directly under `.results` — there is NO `.results.response`
+# wrapper layer. Field names below are the ones that actually exist:
+#
+#   core create-item        -> $r.Json.results.item.id
+#                              $r.Json.results.item.displayName
+#   onelake list_workspaces -> $r.Json.results.workspaces[].id
+#                              $r.Json.results.workspaces[].displayName  (NOT .name)
+#   onelake list_items      -> $r.Json.results.xmlResponse  (raw XML pass-through;
+#                              the .items field is currently null — see 1.2 below)
+#   onelake list_items_dfs  -> $r.Json.results.items.paths[].name
+#   onelake list_files      -> $r.Json.results.files[]      (uses --directory-path,
+#                                                            NOT --path)
+#   onelake list_table_namespaces -> $r.Json.results.namespaces[]   (flat array)
+#   onelake get_settings    -> $r.Json.results.settings.diagnostics
+#   onelake create_or_update_shortcuts -> see Phase 4 — body shape is documented
+#                              in the tool description; pass --definition with
+#                              either a single object or an array.
+#
+# Error envelope (status >= 400) puts the upstream Fabric error in:
+#   $r.Json.results.error.message    (full upstream JSON, as a string)
+#   $r.Json.results.error.type
+#
+# Capture both the raw envelope AND your inputs into the report — never just
+# the boolean pass/fail.
+
+# --- example: Phase 0 + 1 ---
+$r = Invoke-Fab core create-item --workspace $env:WS `
+        --display-name "e2e_data_$($env:RUN_ID)" --item-type Lakehouse
+$DATA = $r.Json.results.item.id
+
+$r = Invoke-Fab onelake list_workspaces
+$wsHit = $r.Json.results.workspaces | Where-Object { $_.id -eq $env:WS }
+
+$r = Invoke-Fab onelake list_items_dfs --workspace-id $env:WS
+$paths = $r.Json.results.items.paths
+```
+
+Save this harness alongside any per-run state (lakehouse IDs, workspace ID,
+principal) so the next session can resume without re-deriving everything.
+
 ---
 
 ## The prompt — paste from here
@@ -98,6 +173,22 @@ and keep going.
    slice of the output so I can review even when the call succeeded.
 8. Do not redact error messages in the report. I need raw error strings to
    debug the underlying tool.
+9. **Cap body-shape guessing at 2 attempts per tool.** Some tools
+   (`modify_diagnostics`, `create_or_update_data_access_role`) currently have
+   descriptions that don't reveal the request-body schema. If your first
+   plausible body returns 4xx, try ONE alternative shape, then stop. Record
+   both attempts (full body + full server error) and mark the step `fail`
+   with `bug_kind: "description"`. Iterating further on body shape blocks the
+   run and doesn't add new information — the failure IS the signal.
+10. **Response-shape ground rules — do not guess field paths.** The Fabric
+    MCP envelope is `{ status, message, results: { ... } }`. The payload sits
+    directly under `results` — there is no `results.response` wrapper. When
+    parsing into structured assertions, prefer `list_items_dfs` (structured
+    `items.paths[].name`) over `list_items` (currently raw `xmlResponse`
+    pass-through with `items: null` — see 1.2). Workspaces use `displayName`,
+    not `name`. `core create-item` returns `results.item.id`. If a result
+    field is unexpectedly null, dump the full envelope into the report
+    rather than asserting against a guessed path.
 
 # Phase 0 — Setup
 
@@ -117,7 +208,12 @@ and keep going.
      ASSERT: WORKSPACE appears in the result.
 1.2  Call `list_items` for WORKSPACE.
      ASSERT: both lakehouses created in Phase 0 appear, with the IDs returned
-     by `create-item`.
+     by `create-item`. NOTE: `list_items` currently returns the OneLake DFS
+     XML in `results.xmlResponse` and leaves `results.items` null (intentional
+     pass-through pending team discussion — do NOT classify the null `items`
+     field as a bug). Satisfy the assertion by checking the lakehouse IDs are
+     substrings of the returned XML, or pivot to `list_items_dfs` (1.3) which
+     returns a structured array.
 1.3  Call `list_items_dfs` for WORKSPACE.
      ASSERT: both lakehouses appear, returned as DFS paths.
 
