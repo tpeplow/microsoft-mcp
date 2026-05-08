@@ -98,9 +98,17 @@ function Step {
         [string]$Notes = ''
     )
     $r = Invoke-Fab -ArgsList $ArgsList
-    $assertResult = 'n/a'
-    if ($AssertFn) {
-        try { $assertResult = if (& $AssertFn $r) { 'pass' } else { 'fail' } } catch { $assertResult = 'fail'; $Notes += " (assert error: $_)" }
+    # If fabmcp produced no parseable JSON envelope at all, that's a crash/no-output
+    # situation (commonly: a serialization exception inside the tool that swallows
+    # the response). Always treat as fail; never let a permissive assertion mask it.
+    if ($null -eq $r.Json) {
+        $assertResult = 'fail'
+        $Notes = ($Notes + ' (no JSON envelope returned - likely tool crash)').Trim()
+    } else {
+        $assertResult = 'n/a'
+        if ($AssertFn) {
+            try { $assertResult = if (& $AssertFn $r) { 'pass' } else { 'fail' } } catch { $assertResult = 'fail'; $Notes += " (assert error: $_)" }
+        }
     }
     $outcome = if ($assertResult -eq 'pass') { 'pass' } elseif ($assertResult -eq 'fail') { 'fail' } elseif (-not $r.Ok) { 'fail' } else { 'pass' }
     $cliCmd = "fabmcp " + ($ArgsList -join ' ')
@@ -270,13 +278,42 @@ Step '4.6' 'download_file (via shortcut)' "bytes match original" `
     @('onelake','download_file','--workspace-id',$env:WS,'--item-id',$SC,'--file-path',"Files/data_$($env:RUN_ID)/payload.json") `
     { param($x) $b64 = $x.Json.results.blob.contentBase64; if (-not $b64) { return $false }; [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64)) -eq $payload } | Out-Null
 
-Step '4.7a' 'reset_shortcut_cache' "200 returned (workspace-scoped)" `
-    @('onelake','reset_shortcut_cache','--workspace-id',$env:WS) `
-    { param($x) $x.Ok -or ($x.Json.results.message -match 'ExternalShortcutCacheDisabled') } 'workspace may not have external-shortcut cache enabled' | Out-Null
+$rc = Invoke-Fab -ArgsList @('onelake','reset_shortcut_cache','--workspace-id',$env:WS)
+if ($rc.Json -and $rc.Json.status -eq 400 -and $rc.Json.results.message -match 'ExternalShortcutCacheDisabled') {
+    Skip-Step '4.7a' 'reset_shortcut_cache' 'workspace does not have the external-shortcut cache feature enabled (Fabric returned ExternalShortcutCacheDisabled); pre-req not met for this scenario'
+    Skip-Step '4.7b' 'download_file (post cache-reset)' 'reset_shortcut_cache was skipped (pre-req not met)'
+} else {
+    # synthesize a Step entry with the captured response
+    $cliCmd = "fabmcp onelake reset_shortcut_cache --workspace-id $($env:WS)"
+    $respText = if ($rc.JsonText) { $rc.JsonText } else { $rc.Raw }
+    if ($respText.Length -gt 6000) { $respText = $respText.Substring(0,6000) + "`n... (truncated)" }
+    $assert = if ($rc.Ok) { 'pass' } else { 'fail' }
+    Append-Trans @"
 
-Step '4.7b' 'download_file (post cache-reset)' "bytes still match after reset" `
-    @('onelake','download_file','--workspace-id',$env:WS,'--item-id',$SC,'--file-path',"Files/data_$($env:RUN_ID)/payload.json") `
-    { param($x) $b64 = $x.Json.results.blob.contentBase64; if (-not $b64) { return $false }; [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64)) -eq $payload } | Out-Null
+### 4.7a  reset_shortcut_cache
+
+**Outcome:** $assert
+**Assertion:** 200 returned (workspace-scoped) -> $assert
+**Notes:** 
+
+**Request**
+
+``````
+$cliCmd
+``````
+
+**Response**
+
+``````json
+$respText
+``````
+"@
+    Write-Host "[4.7a reset_shortcut_cache] outcome=$assert assert=$assert"
+
+    Step '4.7b' 'download_file (post cache-reset)' "bytes still match after reset" `
+        @('onelake','download_file','--workspace-id',$env:WS,'--item-id',$SC,'--file-path',"Files/data_$($env:RUN_ID)/payload.json") `
+        { param($x) $b64 = $x.Json.results.blob.contentBase64; if (-not $b64) { return $false }; [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64)) -eq $payload } | Out-Null
+}
 
 Append-Trans "`n## Phase 5  Tables (best-effort, empty acceptable)"
 
