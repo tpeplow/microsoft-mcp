@@ -63,7 +63,9 @@ public class FabricCoreService(HttpClient httpClient, TokenCredential? credentia
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new HttpRequestException(
-                $"Fabric API request failed with status {(int)response.StatusCode} ({response.StatusCode}): {content}");
+                $"Fabric API request failed with status {(int)response.StatusCode} ({response.StatusCode}): {content}",
+                inner: null,
+                statusCode: response.StatusCode);
         }
     }
 }
