@@ -138,7 +138,7 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         CancellationToken cancellationToken = default)
     {
         var (workspaceId, itemId) = await ResolveAsync(workspaceIdentifier, itemIdentifier, cancellationToken);
-        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/items/{itemId}/dataAccessRoles/{Uri.EscapeDataString(roleName)}";
+        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/items/{itemId}/dataAccessRoles/{Uri.EscapeDataString(roleName)}?preview=true";
         return await SendJsonAsync(HttpMethod.Get, url, jsonContent: null, headers: null, cancellationToken);
     }
 
@@ -151,7 +151,47 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         CancellationToken cancellationToken = default)
     {
         var (workspaceId, itemId) = await ResolveAsync(workspaceIdentifier, itemIdentifier, cancellationToken);
-        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/items/{itemId}/dataAccessRoles/{Uri.EscapeDataString(roleName)}";
+        // The single-role create-or-update PUT targets the *collection* URL, not the per-role URL.
+        // Role identity is carried in the body's `value[0].name` field.
+        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/items/{itemId}/dataAccessRoles?preview=true&dataAccessRoleConflictPolicy=Overwrite";
+
+        // The Fabric API expects the role wrapped in a `value` array: { "value": [ <role> ] }.
+        // Accept either shape from the caller — if they already wrapped, ensure name matches; if
+        // they passed a bare role object, wrap it for them and inject the name from the path arg.
+        string body;
+        if (definition.ValueKind == JsonValueKind.Object && definition.TryGetProperty("value", out var existingValue) && existingValue.ValueKind == JsonValueKind.Array)
+        {
+            body = definition.GetRawText();
+        }
+        else
+        {
+            var hasName = definition.ValueKind == JsonValueKind.Object && definition.TryGetProperty("name", out _);
+
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName("value");
+                writer.WriteStartArray();
+                if (hasName)
+                {
+                    definition.WriteTo(writer);
+                }
+                else
+                {
+                    writer.WriteStartObject();
+                    writer.WriteString("name", roleName);
+                    foreach (var prop in definition.EnumerateObject())
+                    {
+                        prop.WriteTo(writer);
+                    }
+                    writer.WriteEndObject();
+                }
+                writer.WriteEndArray();
+                writer.WriteEndObject();
+            }
+            body = Encoding.UTF8.GetString(stream.ToArray());
+        }
 
         Dictionary<string, string>? headers = null;
         if (!string.IsNullOrWhiteSpace(etag))
@@ -159,7 +199,7 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
             headers = new Dictionary<string, string> { ["If-Match"] = etag };
         }
 
-        return await SendJsonAsync(HttpMethod.Put, url, definition.GetRawText(), headers, cancellationToken);
+        return await SendJsonAsync(HttpMethod.Put, url, body, headers, cancellationToken);
     }
 
     public async Task DeleteDataAccessRoleAsync(
@@ -169,7 +209,7 @@ public class FabricApiService(HttpClient httpClient, IOneLakeService oneLakeServ
         CancellationToken cancellationToken = default)
     {
         var (workspaceId, itemId) = await ResolveAsync(workspaceIdentifier, itemIdentifier, cancellationToken);
-        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/items/{itemId}/dataAccessRoles/{Uri.EscapeDataString(roleName)}";
+        var url = $"{FabricEndpoints.FabricApiBaseUrl}/workspaces/{workspaceId}/items/{itemId}/dataAccessRoles/{Uri.EscapeDataString(roleName)}?preview=true";
         await SendNoContentAsync(HttpMethod.Delete, url, jsonContent: null, headers: null, cancellationToken);
     }
 
